@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0f1117">
+<title>قیمت ارز دیجیتال</title>
+<style>
+:root{--bg:#f4f6fa;--fg:#161a22;--mut:#7a8294;--bd:#c9d0dc;--hv:#e6eaf2;--g:#16a34a;--r:#dc2626;--bl:#5b7a99;color-scheme:light}
+:root[data-theme=dark]{--bg:#0f1117;--fg:#e8ebf2;--mut:#8b93a5;--bd:#2c3342;--hv:#1d2230;--bl:#8fa7c1;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;padding:15px;background:var(--bg);color:var(--fg);font:16px/1.6 Tahoma,"Segoe UI",system-ui,sans-serif}
+main{max-width:1000px;margin:auto}
+header{display:flex;justify-content:space-between;align-items:center;gap:10px}
+h1{margin:0;font-size:28px}
+h2{font-size:22px;margin:18px 0 10px}
+.mut{color:var(--mut);font-size:14px}
+hr{border:0;border-top:1px solid var(--bd);margin:18px 0}
+button,input{font:inherit;color:inherit}
+.ib{background:none;border:1px solid var(--bd);border-radius:50%;width:42px;height:42px;cursor:pointer;font-size:20px}
+.btn{background:var(--hv);border:1px solid var(--bd);border-radius:10px;padding:8px 14px;cursor:pointer}
+#pick{width:100%;display:flex;justify-content:space-between;align-items:center;background:none;border:1.5px solid var(--bd);border-radius:14px;padding:14px 16px;font-size:20px;cursor:pointer}
+#panel{display:none;margin-top:8px;border:1px solid var(--bd);border-radius:14px;padding:10px}
+#panel.open{display:block}
+#q{width:100%;background:none;border:1px solid var(--bd);border-radius:10px;padding:10px;margin-bottom:6px}
+#list{height:300px;overflow-y:auto}
+#list div{padding:10px 12px;border-radius:10px;cursor:pointer;font-size:18px}
+#list div:hover{background:var(--hv)}
+.cards{display:flex;flex-wrap:wrap;gap:15px}
+.card{width:260px;padding:16px;border-radius:20px;border:1px solid color-mix(in srgb,var(--c) 60%,transparent);background:linear-gradient(135deg,color-mix(in srgb,var(--c) 28%,transparent),color-mix(in srgb,var(--c) 5%,transparent));box-shadow:0 4px 14px rgba(0,0,0,.25);transition:opacity .5s,transform .5s}
+.card.fade{opacity:0;transform:scale(.92)}
+.top{display:flex;align-items:center;gap:10px}
+.top img,.fb{width:46px;height:46px;border-radius:50%;flex:none}
+.fb{display:grid;place-items:center;background:var(--c);color:#fff;font-size:14px;font-weight:700}
+.nm{flex:1;line-height:1.3}.nm b{font-size:22px}
+.star{background:none;border:0;font-size:28px;cursor:pointer;color:#f5b301;padding:0}
+.usd{font-size:26px;font-weight:600;margin-top:6px;direction:ltr;text-align:right}
+.tmn{font-size:20px;color:var(--bl)}
+.chg{font-size:18px;font-weight:700;color:var(--c)}
+.row{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+@media(max-width:600px){.card{width:100%}h1{font-size:23px}}
+@media(prefers-reduced-motion:reduce){.card{transition:none}}
+</style>
+</head>
+<body>
+<main>
+<header>
+  <button class="ib" id="theme" aria-label="تغییر تم">☀️</button>
+  <div style="text-align:right"><h1>📈 قیمت لحظه‌ای ارز دیجیتال</h1><div class="mut">منبع: نوبیتکس</div></div>
+</header>
+<hr>
+<section id="favS" hidden><h2>⭐ علاقه‌مندی‌های من</h2><div class="cards" id="favC"></div><hr></section>
+<button id="pick"><span id="pickT">ارز مد نظرت رو انتخاب کن</span><span id="arr">▼</span></button>
+<div id="panel"><input id="q" placeholder="جستجو (نام فارسی یا نماد انگلیسی)"><div class="mut" id="cnt"></div><div id="list"></div></div>
+<div class="cards" id="selC" style="margin-top:14px"></div>
+<hr>
+<div class="row">
+  <div class="row"><button class="btn" id="ref">🔄 بروزرسانی</button><span class="mut" id="last"></span></div>
+  <h2 style="margin:0">ارزهای معروف</h2>
+</div>
+<label class="mut" style="display:block;margin:10px 0"><input type="checkbox" id="auto" checked> بروزرسانی خودکار (هر ۳۰ ثانیه)</label>
+<div class="mut" id="st" style="margin-bottom:10px"></div>
+<div class="cards" id="popC"></div>
+</main>
+<script>
+const API="https://apiv2.nobitex.ir/market/stats";
+const ICON="https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/128/color/";
+const FA={btc:"بیت‌کوین",eth:"اتریوم",usdt:"تتر",ltc:"لایت‌کوین",doge:"دوج‌کوین",xrp:"ریپل",trx:"ترون",ada:"کاردانو",sol:"سولانا",bnb:"بایننس‌کوین",dot:"پولکادات",shib:"شیبا",avax:"آوالانچ",link:"چین‌لینک",dogs:"داگز",ton:"تون‌کوین",not:"نات‌کوین",pepe:"پپه",floki:"فلوکی",matic:"پالیگان",atom:"کازماس",uni:"یونی‌سواپ",etc:"اتریوم کلاسیک",bch:"بیت‌کوین کش",xlm:"استلار",eos:"ایاس",near:"نیر",apt:"آپتوس",arb:"آربیتروم",op:"آپتیمیزم",sui:"سویی",ftm:"فانتوم",algo:"الگوراند",aave:"آوه",mana:"دسنترالند",sand:"سندباکس",axs:"اکسی اینفینیتی",gala:"گالا",chz:"چیلیز",ape:"ایپ‌کوین",crv:"کرو",mkr:"میکر",snx:"سینتتیکس",ldo:"لیدو",inj:"اینجکتیو",fil:"فایل‌کوین",egld:"الروند",hbar:"هدرا",vet:"وی‌چین",icp:"اینترنت کامپیوتر",wld:"ورلدکوین",gmt:"استپن",ens:"ای‌ان‌اس","1inch":"وان‌اینچ",cvc:"سیویک",bat:"بت",comp:"کامپاند",dydx:"دی‌وای‌دی‌اکس",enj:"انجین",grt:"گراف",lrc:"لوپرینگ",sushi:"سوشی‌سواپ",yfi:"یرن‌فایننس",zrx:"زیرو‌ایکس"};
+const POP=["btc","eth","usdt","ltc","doge","xrp","trx","ada"];
+const $=id=>document.getElementById(id);
+let stats={},syms=[],sel=null,favs=[];
+try{favs=JSON.parse(localStorage.getItem("favs")||"[]")}catch(e){}
+const fmt=v=>{const n=+v;return isNaN(n)?v:n>=1?n.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2}):String(+n.toPrecision(6))};
+const toman=v=>isNaN(+v)?"-":Math.round(v/10).toLocaleString("en-US");
+const disp=s=>FA[s]?s.toUpperCase()+" "+FA[s]:s.toUpperCase();
+const norm=t=>t.replace(/ي/g,"ی").replace(/ك/g,"ک").replace(/\u200c| /g,"").toLowerCase();
+
+function card(s,fade){
+  const d=stats[s+"-usdt"];if(!d)return null;
+  const r=stats[s+"-rls"],ch=+d.dayChange,up=ch>=0;
+  const el=document.createElement("div");
+  el.className="card"+(fade?" fade":"");
+  el.style.setProperty("--c",up?"var(--g)":"var(--r)");
+  el.innerHTML=`<div class="top"><button class="star" aria-label="علاقه‌مندی">${favs.includes(s)?"★":"☆"}</button><div class="nm"><b>${FA[s]||s.toUpperCase()}</b><div class="mut">${s.toUpperCase()}</div></div><img alt="" src="${ICON+s.toLowerCase()}.png"></div>
+  <div class="usd">${fmt(d.latest)} $</div>
+  ${r?`<div class="tmn">${toman(r.latest)} تومان</div>`:""}
+  <div class="chg">${up?"▲":"▼"} ${Math.abs(ch)}٪</div>
+  <div class="mut">بالا: ${fmt(d.dayHigh)} | پایین: ${fmt(d.dayLow)}</div>`;
+  el.querySelector(".star").onclick=()=>toggleFav(s);
+  const img=el.querySelector("img");
+  img.onerror=()=>{const f=document.createElement("div");f.className="fb";f.textContent=s.toUpperCase().slice(0,3);img.replaceWith(f)};
+  return el;
+}
+function fill(box,arr,fade){
+  box.innerHTML="";
+  arr.forEach(s=>{const c=card(s,fade);if(c){box.appendChild(c);if(fade)requestAnimationFrame(()=>requestAnimationFrame(()=>c.classList.remove("fade")))}});
+  return box.children.length;
+}
+function render(fade){
+  fill($("popC"),POP,fade);
+  $("favS").hidden=!fill($("favC"),favs,fade);
+  fill($("selC"),sel?[sel]:[],fade);
+}
+function toggleFav(s){
+  favs=favs.includes(s)?favs.filter(x=>x!==s):[...favs,s];
+  try{localStorage.setItem("favs",JSON.stringify(favs))}catch(e){}
+  render(false);
+}
+function renderList(){
+  const t=norm($("q").value),L=$("list");L.innerHTML="";let n=0;
+  syms.forEach(s=>{
+    if(t&&!norm(disp(s)).includes(t))return;
+    const d=document.createElement("div");d.textContent=disp(s);
+    d.onclick=()=>{sel=s;$("pickT").textContent=disp(s);setPanel(false);fill($("selC"),[s],true)};
+    L.appendChild(d);n++;
+  });
+  $("cnt").textContent=n+" ارز";
+}
+function setPanel(o){$("panel").classList.toggle("open",o);$("arr").textContent=o?"▲":"▼"}
+$("pick").onclick=()=>setPanel(!$("panel").classList.contains("open"));
+$("q").oninput=renderList;
+$("theme").onclick=()=>{const h=document.documentElement,d=h.dataset.theme==="dark";h.dataset.theme=d?"light":"dark";$("theme").textContent=d?"🌙":"☀️"};
+
+async function load(fade){
+  try{
+    const r=await fetch(API);
+    stats=(await r.json()).stats;
+    const ns=Object.keys(stats).filter(k=>k.endsWith("-usdt")).map(k=>k.replace("-usdt","")).sort();
+    render(fade);
+    $("st").textContent="✅ قیمت‌ها بروزرسانی شد";
+    $("last").textContent="آخرین بروزرسانی "+new Date().toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"});
+    if(ns.join()!==syms.join()){syms=ns;renderList()}
+  }catch(e){$("st").textContent="❌ دریافت قیمت‌ها ممکن نشد؛ اینترنت یا دسترسی به نوبیتکس رو چک کن."}
+}
+$("ref").onclick=()=>load(false);
+setInterval(()=>{if($("auto").checked)load(false)},30000);
+load(true);
+</script>
+</body>
+</html>
